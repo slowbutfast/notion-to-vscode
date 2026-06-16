@@ -56,7 +56,11 @@ Open the database in Notion as a full page and look at the URL:
 3. Open `.env` and fill in:
    - `NOTION_TOKEN`: Paste your Integration Token.
    - `NOTION_DATABASE_ID`: Paste your Database ID.
-   - *(Optional)* If your Notion property names are different from `Path` and `Launch`, customize them using the `NOTION_PROPERTY_PATH` and `NOTION_PROPERTY_LAUNCH` variables.
+    - *(Optional)* Configure additional variables if your setup differs:
+      - `NOTION_PROPERTY_PATH`: Name of the text property in Notion (defaults to `Path`).
+      - `NOTION_PROPERTY_LAUNCH`: Name of the checkbox property in Notion (defaults to `Launch`).
+      - `VSCODE_EDITION`: Set to `stable` (default) or `insiders` depending on your editor version.
+      - `VSCODE_FORCE_NEW_WINDOW`: Set to `true` (default) to force folders to open in a new window, or `false` to reuse the active window.
 
 ### 5. Running the App (Manual Mode)
 1. Install dependencies:
