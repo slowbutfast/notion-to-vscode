@@ -22,26 +22,52 @@ console.log(`Polling Database: ${databaseId}`);
 console.log(`Tracking Properties: Path='${pathPropName}', Launch='${launchPropName}'`);
 console.log('Status: Running (Press Ctrl+C to stop)');
 
+const vscodeEdition = process.env.VSCODE_EDITION || 'stable';
+const forceNewWindow = process.env.VSCODE_FORCE_NEW_WINDOW !== 'false'; // Defaults to true
+
 /**
- * Open a folder in VS Code using the system protocol handler.
+ * Open a folder in VS Code.
  */
 function openInVSCode(path) {
   // Ensure the path is absolute and properly formatted
   const formattedPath = path.startsWith('/') ? path : '/' + path;
-  // URI encode characters like spaces
-  const encodedPath = encodeURI(formattedPath);
-  const vscodeUrl = `vscode://file${encodedPath}`;
 
   console.log(`[Launcher] Opening project in VS Code: ${path}`);
   
-  // Use macOS 'open' command. On Windows/Linux, you could call 'start' / 'xdg-open' or run 'code' directly.
-  const command = process.platform === 'win32'
-    ? `start "" "${vscodeUrl}"`
-    : `open "${vscodeUrl}"`;
+  let command;
+  if (process.platform === 'darwin') {
+    const bundleId = vscodeEdition === 'insiders' ? 'com.microsoft.VSCodeInsiders' : 'com.microsoft.VSCode';
+    if (forceNewWindow) {
+      command = `open -b ${bundleId} --args -n "${formattedPath}"`;
+    } else {
+      command = `open "vscode://file${encodeURI(formattedPath)}"`;
+    }
+  } else if (process.platform === 'win32') {
+    if (forceNewWindow) {
+      command = `code -n "${formattedPath}"`;
+    } else {
+      command = `start "" "vscode://file${encodeURI(formattedPath)}"`;
+    }
+  } else {
+    if (forceNewWindow) {
+      command = `code -n "${formattedPath}"`;
+    } else {
+      command = `xdg-open "vscode://file${encodeURI(formattedPath)}"`;
+    }
+  }
 
   exec(command, (error) => {
     if (error) {
       console.error(`[Launcher] Error launching VS Code: ${error.message}`);
+      // Fallback if 'code' command fails on Windows/Linux: try the protocol handler
+      if (forceNewWindow && (process.platform === 'win32' || process.platform === 'linux')) {
+        console.log('[Launcher] Retrying with protocol handler fallback...');
+        const fallbackUrl = `vscode://file${encodeURI(formattedPath)}`;
+        const fallbackCommand = process.platform === 'win32' 
+          ? `start "" "${fallbackUrl}"` 
+          : `xdg-open "${fallbackUrl}"`;
+        exec(fallbackCommand);
+      }
     }
   });
 }
