@@ -1,62 +1,64 @@
-# Notion to VS Code Launcher
+# Notion to VS Code Project Launcher
 
-A lightweight Node.js companion application that polls a Notion database via the official Notion API. When a trigger checkbox/button is toggled on a project page, the app automatically launches that project/workspace folder in VS Code.
+> **Platform Compatibility**:  **macOS Only**
+> 
+> This tool leverages macOS-specific protocols (`open`) and background service daemons (`launchd`) to automatically launch local workspaces.
 
-This enables you to use Notion as your central dashboard, opening local projects on your computer with a single click.
+A lightweight, background Node.js daemon that connects to Notion via the official Notion API. When a checkbox or button is toggled next to a project entry on your Notion dashboard, this app instantly opens the corresponding local folder or workspace in VS Code.
+
+This enables you to use Notion as your centralized project dashboard, launching your local development environments with a single click.
 
 ---
 
 ## How it Works
 
-1. **Notion Database**: You list your projects in a Notion database. Each project page has:
-   - A `Path` text property containing the absolute local folder path.
+1. **Notion Database**: You maintain a database of projects in Notion. Each entry has:
+   - A `Path` text property (e.g. `/Users/username/projects/my-app`).
    - A `Launch` checkbox property.
-2. **Background Daemon**: This Node.js app polls the database every 1.5 seconds.
-3. **OS Protocol Trigger**: When `Launch` is checked, the app runs the OS command to open `vscode://file/[Path]`, launching the editor to the workspace.
-4. **Checkbox Reset**: The app unchecks the Notion `Launch` checkbox so it doesn't trigger repeatedly.
+2. **Background Daemon**: A local Node.js process polls the database every 1.5 seconds.
+3. **OS Trigger**: When `Launch` is checked, the daemon runs the macOS system command to trigger the `vscode://file/[Path]` protocol handler, opening the project in VS Code.
+4. **Auto-Reset**: The daemon immediately updates Notion to uncheck `Launch`, resetting the trigger for next time.
 
 ---
 
-## Setup Instructions
+## Installation & Setup
 
 ### 1. Create a Notion Connection
-1. Visit [notion.so/my-integrations](https://www.notion.so/my-integrations) and click **+ New integration**.
-2. Select your workspace, name it (e.g. `VS Code Launcher`), and click **Submit**.
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) and click **+ New integration**.
+2. Name it (e.g., `VS Code Launcher`), select the appropriate workspace, and click **Submit**.
 3. Under the **Secrets** tab, copy the **Internal Integration Token** (starts with `secret_`).
 
-### 2. Configure Your Database
-1. Create a database in Notion.
-2. Add the following properties:
-   - `Path`: A **Text** property. Enter your project's absolute local path (e.g., `/Users/username/projects/my-project`).
-   - `Launch`: A **Checkbox** property.
-3. Open the database page, click the **three-dot menu (...)** in the top-right corner, select **Connections**, and add your integration (`VS Code Launcher`).
-4. *(Optional)* Create a **Button** property in your database to edit the page and set `Launch` to Checked. This turns launching into a simple click!
+### 2. Configure Your Notion Database
+1. Open your projects database in Notion (or create a new one).
+2. Ensure the database contains these properties:
+   - **`Path`** (Text property): The absolute local folder path to open (e.g., `/Users/gregorylazatin/projects/my-app`).
+   - **`Launch`** (Checkbox property).
+3. Connect the integration to your database:
+   - Open the database as a page.
+   - Click the **three-dot menu (`...`)** in the top-right corner.
+   - Go to **Connections** -> **Add connection**.
+   - Search for your integration (`VS Code Launcher`) and add it.
+4. *(Optional)* Add a **Button** property named `Open` in your database. Configure it to: **Edit page** -> Set `Launch` to **Checked**. (This lets you open projects with a single button click).
 
-### 3. Local Configuration
-1. Clone or copy these files into your local directory.
-2. Create a `.env` file in the root directory:
+### 3. Get the Database ID
+Open the database in Notion as a full page and look at the URL:
+`https://www.notion.so/<long_hash_1>?v=<long_hash_2>`
+
+- **`<long_hash_1>`** (the 32-character string before the `?`) is your **Database ID**. (Copy this one!).
+- **`<long_hash_2>`** (after the `?v=`) is the **View ID**. (Do NOT use this one!).
+
+### 4. Local Configuration
+1. Clone this repository to your Mac.
+2. Copy `.env.example` to create your local `.env` configuration file:
    ```bash
    cp .env.example .env
    ```
 3. Open `.env` and fill in:
-   - `NOTION_TOKEN`: Your integration token.
-   - `NOTION_DATABASE_ID`: The 32-character ID of your database.
-     > **How to find your Database ID**:
-     > Open the database as a page (or copy the link to the database view). Look at the URL structure:
-     >
-     > `https://www.notion.so/<long_hash_1>?v=<long_hash_2>`
-     >
-     > - **`<long_hash_1>`** is the **Database ID** (Copy this one!).
-     > - **`<long_hash_2>`** is the **View ID** (Do NOT copy this one!).
-     > 
-     > *Note: Make sure to add your integration as a Connection to this database by clicking `...` -> `Connections` -> search for your integration.*
-   - *(Optional)* Custom property names if they differ from `Path` and `Launch`:
-     ```env
-     NOTION_PROPERTY_PATH=Path
-     NOTION_PROPERTY_LAUNCH=Launch
-     ```
+   - `NOTION_TOKEN`: Paste your Integration Token.
+   - `NOTION_DATABASE_ID`: Paste your Database ID.
+   - *(Optional)* If your Notion property names are different from `Path` and `Launch`, customize them using the `NOTION_PROPERTY_PATH` and `NOTION_PROPERTY_LAUNCH` variables.
 
-### 4. Running the App
+### 5. Running the App (Manual Mode)
 1. Install dependencies:
    ```bash
    npm install
@@ -68,31 +70,44 @@ This enables you to use Notion as your central dashboard, opening local projects
 
 ---
 
-## Project Structure
-* `app.js` — The main polling and launch logic.
-* `package.json` — Dependency management.
-* `com.greg.notion-to-vscode.plist` — Background daemon configuration for macOS.
-* `manifest.json`, `content.js`, `styles.css` — Files for the Chrome Extension (Option 1) in case you prefer the browser-based parsing approach.
+## Running Automatically in the Background (macOS launchd)
 
----
+You can configure the launcher to run silently in the background as a macOS **LaunchAgent** that starts automatically whenever you log into your Mac:
 
-## Run Automatically in the Background (macOS)
+### 1. Identify Your Node Path
+Find the absolute path to your Node.js executable:
+```bash
+which node
+```
+*(For example: `/usr/local/bin/node` or `~/.nvm/versions/node/...`)*
 
-Instead of manually running `npm start` in a terminal tab every time, you can register this app as a macOS **LaunchAgent**. It will run silently in the background and start automatically whenever you log into your Mac:
+### 2. Configure the PLIST file
+Open `notion-to-vscode-launcher.plist` and update the arguments to match your environment:
+1. Replace `/Users/gregorylazatin/.nvm/versions/node/v22.21.1/bin/node` with your absolute Node path from step 1.
+2. Replace `/Users/gregorylazatin/Documents/Dev/projects/notion-to-vscode` in both the script path and `<key>WorkingDirectory</key>` with your repository's local path.
 
-1. Copy the plist configuration to your system LaunchAgents directory:
+### 3. Register the Background Agent
+1. Copy the plist configuration to your user LaunchAgents folder:
    ```bash
-   cp com.greg.notion-to-vscode.plist ~/Library/LaunchAgents/
+   cp notion-to-vscode-launcher.plist ~/Library/LaunchAgents/
    ```
-2. Load and start the background agent:
+2. Load and start the background service:
    ```bash
-   launchctl load ~/Library/LaunchAgents/com.greg.notion-to-vscode.plist
+   launchctl load ~/Library/LaunchAgents/notion-to-vscode-launcher.plist
    ```
 
 To stop or uninstall the background service:
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.greg.notion-to-vscode.plist
-rm ~/Library/LaunchAgents/com.greg.notion-to-vscode.plist
+launchctl unload ~/Library/LaunchAgents/notion-to-vscode-launcher.plist
+rm ~/Library/LaunchAgents/notion-to-vscode-launcher.plist
 ```
 
-*Note: Logs will be automatically outputted to `out.log` and `err.log` in your project folder.*
+*Note: Logs will be automatically generated inside `out.log` and `err.log` in your project folder.*
+
+---
+
+## Repository Structure
+* `notion-vscode-launcher` — The main Node.js polling and system execution code.
+* `package.json` — Package metadata and dependencies (`@notionhq/client`, `dotenv`).
+* `notion-to-vscode-launcher.plist` — LaunchAgent configuration for background automation on macOS.
+* `manifest.json`, `content.js`, `styles.css` — Standard Chrome Extension assets, in case you prefer browser-based parsing instead of the companion daemon.
