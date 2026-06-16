@@ -1,0 +1,50 @@
+/* Notion to VS Code Link Styling */
+
+.notion-vscode-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    color: #3b82f6 !important; /* Premium Indigo Blue */
+    background-color: rgba(59, 130, 246, 0.08) !important;
+    border: 1px dashed rgba(59, 130, 246, 0.3) !important;
+    border-radius: 5px !important;
+    padding: 1px 6px !important;
+    margin: 0 2px !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 0.9em !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-decoration: none !important;
+    user-select: all !important;
+}
+
+/* Hover effects with modern gradient and shadow */
+.notion-vscode-link:hover {
+    color: #ffffff !important;
+    background-image: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+    border-style: solid !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3) !important;
+    transform: translateY(-1px) scale(1.015) !important;
+}
+
+/* Active press state */
+.notion-vscode-link:active {
+    transform: translateY(0) scale(0.98) !important;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Micro-animated external link symbol */
+.notion-vscode-link::after {
+    content: " ↗" !important;
+    margin-left: 4px !important;
+    font-size: 0.8em !important;
+    font-weight: bold !important;
+    opacity: 0.7 !important;
+    display: inline-block !important;
+    transition: transform 0.2s ease, opacity 0.2s ease !important;
+}
+
+.notion-vscode-link:hover::after {
+    opacity: 1 !important;
+    transform: translate(2px, -2px) !important;
+}

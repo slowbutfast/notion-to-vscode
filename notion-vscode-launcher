@@ -1,0 +1,108 @@
+#!/Users/gregorylazatin/.nvm/versions/node/v22.21.1/bin/node
+require('dotenv').config();
+const { Client } = require('@notionhq/client');
+const { exec } = require('child_process');
+
+// Validate environment variables
+const notionToken = process.env.NOTION_TOKEN;
+const databaseId = process.env.NOTION_DATABASE_ID;
+const pathPropName = process.env.NOTION_PROPERTY_PATH || 'Path';
+const launchPropName = process.env.NOTION_PROPERTY_LAUNCH || 'Launch';
+
+if (!notionToken || !databaseId) {
+  console.error('Error: NOTION_TOKEN and NOTION_DATABASE_ID must be set in your .env file.');
+  process.exit(1);
+}
+
+// Initialize official Notion client
+const notion = new Client({ auth: notionToken });
+
+console.log('--- Notion to VS Code Companion App ---');
+console.log(`Polling Database: ${databaseId}`);
+console.log(`Tracking Properties: Path='${pathPropName}', Launch='${launchPropName}'`);
+console.log('Status: Running (Press Ctrl+C to stop)');
+
+/**
+ * Open a folder in VS Code using the system protocol handler.
+ */
+function openInVSCode(path) {
+  // Ensure the path is absolute and properly formatted
+  const formattedPath = path.startsWith('/') ? path : '/' + path;
+  // URI encode characters like spaces
+  const encodedPath = encodeURI(formattedPath);
+  const vscodeUrl = `vscode://file${encodedPath}`;
+
+  console.log(`[Launcher] Opening project in VS Code: ${path}`);
+  
+  // Use macOS 'open' command. On Windows/Linux, you could call 'start' / 'xdg-open' or run 'code' directly.
+  const command = process.platform === 'win32'
+    ? `start "" "${vscodeUrl}"`
+    : `open "${vscodeUrl}"`;
+
+  exec(command, (error) => {
+    if (error) {
+      console.error(`[Launcher] Error launching VS Code: ${error.message}`);
+    }
+  });
+}
+
+/**
+ * Polls the Notion database for pages where the Launch checkbox is checked.
+ */
+async function checkDatabase() {
+  try {
+    const response = await notion.databases.query({
+      database_id: databaseId,
+      filter: {
+        property: launchPropName,
+        checkbox: {
+          equals: true
+        }
+      }
+    });
+
+    for (const page of response.results) {
+      const pathProperty = page.properties[pathPropName];
+      let projectPath = '';
+
+      if (pathProperty && pathProperty.type === 'rich_text') {
+        projectPath = pathProperty.rich_text.map(t => t.plain_text).join('').trim();
+      }
+
+      if (projectPath) {
+        // 1. Launch VS Code
+        openInVSCode(projectPath);
+
+        // 2. Uncheck the Launch checkbox in Notion so it doesn't trigger again
+        console.log(`[Notion] Resetting Launch checkbox for page: ${page.id}`);
+        await notion.pages.update({
+          page_id: page.id,
+          properties: {
+            [launchPropName]: {
+              checkbox: false
+            }
+          }
+        });
+      } else {
+        console.warn(`[Warning] Page ${page.id} has Launch checked but Path is empty.`);
+        // Reset checkbox anyway to prevent infinite loop of warnings
+        await notion.pages.update({
+          page_id: page.id,
+          properties: {
+            [launchPropName]: {
+              checkbox: false
+            }
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error(`[Error] Notion API error: ${error.message}`);
+  }
+
+  // Poll again after 1.5 seconds
+  setTimeout(checkDatabase, 1500);
+}
+
+// Start the loop
+checkDatabase();

@@ -1,0 +1,14 @@
+{
+  "name": "notion-to-vscode",
+  "version": "1.0.0",
+  "description": "Companion app to open VS Code projects triggered from Notion.",
+  "main": "notion-vscode-launcher",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node notion-vscode-launcher"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "dotenv": "^16.4.5"
+  }
+}

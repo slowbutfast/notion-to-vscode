@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Notion to VS Code Opener",
+  "version": "1.0.0",
+  "description": "Allows hyperlinking and opening VS Code projects directly from Notion.",
+  "content_scripts": [
+    {
+      "matches": ["https://*.notion.so/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

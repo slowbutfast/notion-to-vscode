@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Local configuration / API keys
+.env
+
+# Logs
+out.log
+err.log
+*.log
+
+# OS generated files
+.DS_Store
