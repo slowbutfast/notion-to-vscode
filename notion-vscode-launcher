@@ -34,40 +34,23 @@ function openInVSCode(path) {
 
   console.log(`[Launcher] Opening project in VS Code: ${path}`);
   
-  let command;
-  if (process.platform === 'darwin') {
-    const bundleId = vscodeEdition === 'insiders' ? 'com.microsoft.VSCodeInsiders' : 'com.microsoft.VSCode';
-    if (forceNewWindow) {
-      command = `open -b ${bundleId} --args -n "${formattedPath}"`;
-    } else {
-      command = `open "vscode://file${encodeURI(formattedPath)}"`;
-    }
-  } else if (process.platform === 'win32') {
-    if (forceNewWindow) {
-      command = `code -n "${formattedPath}"`;
-    } else {
-      command = `start "" "vscode://file${encodeURI(formattedPath)}"`;
-    }
-  } else {
-    if (forceNewWindow) {
-      command = `code -n "${formattedPath}"`;
-    } else {
-      command = `xdg-open "vscode://file${encodeURI(formattedPath)}"`;
-    }
-  }
+  // Choose standard protocol or custom insiders protocol
+  const scheme = vscodeEdition === 'insiders' ? 'vscode-insiders' : 'vscode';
+  
+  // Format the URL. If forceNewWindow is true, append ?windowId=_blank
+  const suffix = forceNewWindow ? '?windowId=_blank' : '';
+  const encodedPath = encodeURI(formattedPath);
+  const vscodeUrl = `${scheme}://file${encodedPath}${suffix}`;
+
+  const command = process.platform === 'win32'
+    ? `start "" "${vscodeUrl}"`
+    : process.platform === 'darwin'
+      ? `open "${vscodeUrl}"`
+      : `xdg-open "${vscodeUrl}"`;
 
   exec(command, (error) => {
     if (error) {
       console.error(`[Launcher] Error launching VS Code: ${error.message}`);
-      // Fallback if 'code' command fails on Windows/Linux: try the protocol handler
-      if (forceNewWindow && (process.platform === 'win32' || process.platform === 'linux')) {
-        console.log('[Launcher] Retrying with protocol handler fallback...');
-        const fallbackUrl = `vscode://file${encodeURI(formattedPath)}`;
-        const fallbackCommand = process.platform === 'win32' 
-          ? `start "" "${fallbackUrl}"` 
-          : `xdg-open "${fallbackUrl}"`;
-        exec(fallbackCommand);
-      }
     }
   });
 }
